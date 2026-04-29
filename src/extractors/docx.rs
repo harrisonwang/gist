@@ -554,6 +554,13 @@ fn wrap_run_text(
         return text.to_string();
     }
 
+    // Whitespace-only runs (e.g. bold space, italic line break, linked tab) have
+    // no slice-stable "middle" for markdown wrapping; for LLM mode we keep the
+    // raw characters and skip ** / * / []() — see docs/ENGINEERING_DECISIONS.md.
+    if text.trim().is_empty() {
+        return text.to_string();
+    }
+
     let leading_len = text.len() - text.trim_start().len();
     let trailing_len = text.len() - text.trim_end().len();
     let trailing_start = text.len().saturating_sub(trailing_len);
@@ -676,4 +683,28 @@ fn attr(e: &BytesStart, local_name: &[u8]) -> Option<String> {
         .filter_map(|a| a.ok())
         .find(|a| a.key.local_name().as_ref() == local_name)
         .and_then(|a| String::from_utf8(a.value.into_owned()).ok())
+}
+
+#[cfg(test)]
+mod wrap_run_text_tests {
+    use super::wrap_run_text;
+
+    #[test]
+    fn whitespace_only_skips_markdown_wrapping() {
+        let url = Some("https://example.com".to_string());
+        assert_eq!(wrap_run_text(" ", true, false, &None), " ");
+        assert_eq!(wrap_run_text(" ", false, true, &None), " ");
+        assert_eq!(wrap_run_text("\n", false, true, &None), "\n");
+        assert_eq!(wrap_run_text("  \n\t", true, true, &None), "  \n\t");
+        assert_eq!(wrap_run_text(" ", false, false, &url), " ");
+    }
+
+    #[test]
+    fn visible_text_still_gets_markdown_wrapping() {
+        assert_eq!(wrap_run_text("hi", true, false, &None), "**hi**");
+        assert_eq!(
+            wrap_run_text("x", false, false, &Some("https://a".to_string())),
+            "[x](https://a)"
+        );
+    }
 }

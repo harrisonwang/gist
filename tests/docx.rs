@@ -110,6 +110,14 @@ fn xml_space_preserve_runs() {
 }
 
 #[test]
+fn formatted_whitespace_only_runs_no_panic() {
+    // Bold space, italic w:br, hyperlink-only space: LLM mode keeps raw whitespace,
+    // does not emit ** / * / []() around invisible runs (see ENGINEERING_DECISIONS).
+    let out = extract_fixture("docx/13_formatted_whitespace_only_runs.docx", Format::Docx);
+    assert_snapshot!(out);
+}
+
+#[test]
 fn tracked_changes_accept_inserts_drop_deletes() {
     // We accept all tracked changes by default, matching extract-text.
     // <w:ins> contents are kept, <w:del> contents are dropped.

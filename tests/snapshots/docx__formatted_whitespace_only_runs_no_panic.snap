@@ -1,0 +1,9 @@
+---
+source: tests/docx.rs
+expression: out
+---
+intro after space
+
+line2
+
+tail

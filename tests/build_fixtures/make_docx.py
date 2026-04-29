@@ -188,6 +188,35 @@ def build_12_tracked_changes():
     write_minimal_docx(OUT / "12_tracked_changes.docx", document_xml)
 
 
+# ---------- 13: bold/italic/hyperlink on whitespace-only runs (must not panic) ----------
+def build_13_formatted_whitespace_only_runs():
+    """Real Word docs often put w:b / w:i / hyperlink on runs that are only spaces or w:br."""
+    document_xml = """<?xml version="1.0"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<w:body>
+<w:p><w:r><w:t>intro</w:t></w:r>
+<w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve"> </w:t></w:r>
+<w:r><w:t>after space</w:t></w:r></w:p>
+<w:p><w:r><w:rPr><w:i/></w:rPr><w:br/></w:r><w:r><w:t>line2</w:t></w:r></w:p>
+<w:p>
+<w:hyperlink r:id="rIdL1"><w:r><w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r></w:hyperlink>
+<w:r><w:t>tail</w:t></w:r>
+</w:p>
+</w:body></w:document>"""
+    write_minimal_docx(
+        OUT / "13_formatted_whitespace_only_runs.docx",
+        document_xml,
+        extra_rels=[
+            (
+                "rIdL1",
+                "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+                "https://example.com",
+            ),
+        ],
+    )
+
+
 # ============================================================
 # helper to write a minimal valid docx with custom XML
 # ============================================================
