@@ -38,6 +38,13 @@ fn raw_cells_skipped() {
 }
 
 #[test]
+fn nbformat3_worksheets_supported() {
+    // Older notebooks store cells under worksheets and code under `input`.
+    let out = extract_fixture("ipynb/06_nbformat3_worksheets.ipynb", Format::Ipynb);
+    assert_snapshot!(out);
+}
+
+#[test]
 fn malformed_ipynb_returns_clear_error() {
     let err = extract_fixture_err("ipynb/05_malformed.ipynb", Format::Ipynb);
     assert!(err.contains("cells"), "got: {}", err);

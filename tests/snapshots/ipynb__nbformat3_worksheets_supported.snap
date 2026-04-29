@@ -1,0 +1,11 @@
+---
+source: tests/ipynb.rs
+expression: out
+---
+## Old heading
+
+Legacy prose.
+
+```python
+print('legacy')
+```

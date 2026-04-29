@@ -14,17 +14,31 @@ pub fn extract(source: &Source) -> Result<String> {
         .and_then(|l| l.as_str())
         .unwrap_or("");
 
-    let cells = v
-        .get("cells")
-        .and_then(|c| c.as_array())
-        .ok_or_else(|| anyhow!("ipynb missing 'cells' array"))?;
+    let cells = notebook_cells(&v)?;
 
     let mut out = String::new();
     for cell in cells {
         let kind = cell.get("cell_type").and_then(|v| v.as_str()).unwrap_or("");
-        let src = read_source(cell.get("source"));
+        let src = read_source(cell.get("source").or_else(|| cell.get("input")));
 
         match kind {
+            "heading" => {
+                let heading = src.trim();
+                if !heading.is_empty() {
+                    if !out.is_empty() {
+                        out.push('\n');
+                    }
+                    let level = cell
+                        .get("level")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(1)
+                        .clamp(1, 6);
+                    out.push_str(&"#".repeat(level as usize));
+                    out.push(' ');
+                    out.push_str(heading);
+                    out.push('\n');
+                }
+            }
             "markdown" => {
                 if !src.trim().is_empty() {
                     if !out.is_empty() {
@@ -43,6 +57,11 @@ pub fn extract(source: &Source) -> Result<String> {
                 if !out.is_empty() {
                     out.push('\n');
                 }
+                let lang = cell
+                    .get("language")
+                    .and_then(|v| v.as_str())
+                    .filter(|v| !v.is_empty())
+                    .unwrap_or(lang);
                 out.push_str("```");
                 out.push_str(lang);
                 out.push('\n');
@@ -56,6 +75,30 @@ pub fn extract(source: &Source) -> Result<String> {
         }
     }
     Ok(out)
+}
+
+fn notebook_cells(v: &Value) -> Result<Vec<&Value>> {
+    if let Some(cells) = v.get("cells").and_then(|c| c.as_array()) {
+        return Ok(cells.iter().collect());
+    }
+
+    if let Some(worksheets) = v.get("worksheets").and_then(|w| w.as_array()) {
+        let mut cells = Vec::new();
+        let mut saw_cells_array = worksheets.is_empty();
+        for worksheet in worksheets {
+            if let Some(sheet_cells) = worksheet.get("cells").and_then(|c| c.as_array()) {
+                saw_cells_array = true;
+                cells.extend(sheet_cells);
+            }
+        }
+        if saw_cells_array {
+            return Ok(cells);
+        }
+    }
+
+    Err(anyhow!(
+        "ipynb missing 'cells' array or 'worksheets[].cells' arrays"
+    ))
 }
 
 fn read_source(v: Option<&Value>) -> String {

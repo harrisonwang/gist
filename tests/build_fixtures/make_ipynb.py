@@ -86,6 +86,26 @@ def build_05_malformed():
     write("05_malformed.ipynb", {"metadata": {}, "nbformat": 4})
 
 
+# ---------- 06: nbformat 3 notebooks store cells under worksheets ----------
+def build_06_nbformat3_worksheets():
+    write("06_nbformat3_worksheets.ipynb", {
+        "metadata": {"name": ""},
+        "nbformat": 3,
+        "nbformat_minor": 0,
+        "worksheets": [
+            {"cells": [
+                {"cell_type": "heading", "level": 2, "metadata": {},
+                 "source": ["Old heading"]},
+                {"cell_type": "markdown", "metadata": {},
+                 "source": ["Legacy prose.\n"]},
+                {"cell_type": "code", "collapsed": False, "metadata": {},
+                 "input": ["print('legacy')\n"], "language": "python",
+                 "outputs": [], "prompt_number": 1},
+            ]},
+        ],
+    })
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("build_") and callable(fn):
