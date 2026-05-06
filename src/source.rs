@@ -39,7 +39,7 @@ impl Source {
 
     fn fetch_url(url: &str) -> Result<Self> {
         let resp = ureq::get(url)
-            .set("User-Agent", "gist/0.1")
+            .set("User-Agent", "pith/0.1")
             .timeout(Duration::from_secs(30))
             .call()
             .map_err(|e| anyhow!("failed to fetch URL: {e}"))?;

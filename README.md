@@ -1,4 +1,4 @@
-# gist
+# pith
 
 把文件或 URL 转成适合 LLM / Agent 使用的文本。**默认 `--mode md`**：stdout 为 Markdown-like 正文（与 `json` 相对，表示**输出形态**，工具整体仍面向模型与 Agent）。
 
@@ -7,24 +7,24 @@
 ## 使用
 
 ```bash
-gist report.docx
-gist data.xlsx
-gist slides.pptx
-gist paper.pdf
-gist notebook.ipynb
-gist book.epub
-gist data.csv
+pith report.docx
+pith data.xlsx
+pith slides.pptx
+pith paper.pdf
+pith notebook.ipynb
+pith book.epub
+pith data.csv
 
-gist report.docx --mode md
-gist report.docx -m json
-gist file.txt --format text
+pith report.docx --mode md
+pith report.docx -m json
+pith file.txt --format text
 
-gist *.pdf
-gist "*.pdf"
-gist report.pdf notes.docx
+pith *.pdf
+pith "*.pdf"
+pith report.pdf notes.docx
 ```
 
-`gist` 支持多个输入，并会在程序内部展开本地 glob（如 `*.pdf`、`docs/**/*.md`），因此在 Windows `cmd.exe`、PowerShell、macOS/Linux shell 下行为更一致。URL 不会被当作 glob 展开。
+`pith` 支持多个输入，并会在程序内部展开本地 glob（如 `*.pdf`、`docs/**/*.md`），因此在 Windows `cmd.exe`、PowerShell、macOS/Linux shell 下行为更一致。URL 不会被当作 glob 展开。
 
 ## 输出模式
 
@@ -47,7 +47,7 @@ gist report.pdf notes.docx
 ```json
 {
   "mode": "json",
-  "schema_version": "gist-json-v0",
+  "schema_version": "pith-json-v0",
   "status": "placeholder",
   "format": "docx",
   "source": "report.docx",
@@ -55,7 +55,7 @@ gist report.pdf notes.docx
 }
 ```
 
-后续 JSON 模式会改成 block-oriented 结构，例如 `blocks[]`、`source_anchor`、`page`、`slide`、`sheet`、`row_range` 等字段。现在不要把 `gist-json-v0` 当成最终稳定 schema。
+后续 JSON 模式会改成 block-oriented 结构，例如 `blocks[]`、`source_anchor`、`page`、`slide`、`sheet`、`row_range` 等字段。现在不要把 `pith-json-v0` 当成最终稳定 schema。
 
 ## 支持格式
 
@@ -75,12 +75,12 @@ gist report.pdf notes.docx
 
 ```bash
 cargo build --release
-./target/release/gist file.docx
+./target/release/pith file.docx
 ```
 
 ## 设计边界
 
-`gist` 不是 `extract-text` 的逐字复刻。它的目标是 LLM-oriented extraction：
+`pith` 不是 `extract-text` 的逐字复刻。它的目标是 LLM-oriented extraction：
 
 - 更重视语义结构，而不是视觉样式。
 - 更重视 token 经济，而不是无损还原所有 XML 细节。

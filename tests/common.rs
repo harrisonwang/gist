@@ -15,7 +15,7 @@
 //!
 //!     INSTA_UPDATE=always cargo test
 
-use gist::{extractors, format::Format, source::Source};
+use pith::{extractors, format::Format, source::Source};
 use std::path::Path;
 
 pub fn extract_fixture(rel_path: &str, format: Format) -> String {

@@ -7,9 +7,9 @@ use std::fs;
 #[cfg(test)]
 use std::path::{Path, PathBuf};
 
-use gist::extractors;
-use gist::format::{self, Format, FormatArg};
-use gist::source::Source;
+use pith::extractors;
+use pith::format::{self, Format, FormatArg};
+use pith::source::Source;
 use glob::{MatchOptions, glob_with};
 
 const HELP_TEMPLATE: &str = "\
@@ -25,20 +25,20 @@ const HELP_TEMPLATE: &str = "\
 {options}
 
 示例 (Examples):
-  gist report.pdf
-  gist --format html https://example.com/article
-  gist -m json notes.md
-  gist *.pdf
-  gist report.pdf | llm \"Summarize risks and action items\"
+  pith report.pdf
+  pith --format html https://example.com/article
+  pith -m json notes.md
+  pith *.pdf
+  pith report.pdf | llm \"Summarize risks and action items\"
 ";
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "gist",
+    name = "pith",
     version,
     about = "将文件或 URL 转换为 LLM-friendly Markdown",
     long_about = None,
-    override_usage = "gist [OPTIONS] <input>...",
+    override_usage = "pith [OPTIONS] <input>...",
     help_template = HELP_TEMPLATE,
     disable_help_flag = true,
     disable_version_flag = true
@@ -169,7 +169,7 @@ fn write_json_output(documents: &[ProcessedInput]) {
     if let [document] = documents {
         let obj = serde_json::json!({
             "mode": "json",
-            "schema_version": "gist-json-v0",
+            "schema_version": "pith-json-v0",
             "status": "placeholder",
             "content": document.markdown,
             "format": document.format.to_string(),
@@ -192,7 +192,7 @@ fn write_json_output(documents: &[ProcessedInput]) {
 
     let obj = serde_json::json!({
         "mode": "json",
-        "schema_version": "gist-json-v0",
+        "schema_version": "pith-json-v0",
         "status": "placeholder",
         "items": items,
     });
@@ -259,7 +259,7 @@ impl TestDir {
         let unique = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)?
             .as_nanos();
-        let path = std::env::temp_dir().join(format!("gist-{name}-{unique}"));
+        let path = std::env::temp_dir().join(format!("pith-{name}-{unique}"));
         fs::create_dir_all(&path)?;
         Ok(Self { path })
     }
@@ -282,7 +282,7 @@ mod tests {
 
     #[test]
     fn input_without_flags_still_parses() {
-        let cli = Cli::try_parse_from(["gist", "report.pdf"]).unwrap();
+        let cli = Cli::try_parse_from(["pith", "report.pdf"]).unwrap();
 
         assert_eq!(cli.inputs, ["report.pdf"]);
         assert_eq!(cli.mode, OutputMode::Md);
@@ -291,7 +291,7 @@ mod tests {
 
     #[test]
     fn multiple_inputs_parse() {
-        let cli = Cli::try_parse_from(["gist", "a.pdf", "b.pdf"]).unwrap();
+        let cli = Cli::try_parse_from(["pith", "a.pdf", "b.pdf"]).unwrap();
 
         assert_eq!(cli.inputs, ["a.pdf", "b.pdf"]);
     }
@@ -333,20 +333,20 @@ mod tests {
 
     #[test]
     fn help_uses_bilingual_headings_and_english_placeholders() {
-        let err = Cli::try_parse_from(["gist", "-h"]).unwrap_err();
+        let err = Cli::try_parse_from(["pith", "-h"]).unwrap_err();
 
         assert_eq!(err.kind(), clap::error::ErrorKind::DisplayHelp);
         let help = err.to_string();
         assert!(help.contains("将文件或 URL 转换为 LLM-friendly Markdown"));
         assert!(help.contains("用法 (Usage):"));
-        assert!(help.contains("gist [OPTIONS] <input>..."));
+        assert!(help.contains("pith [OPTIONS] <input>..."));
         assert!(help.contains("参数 (Arguments):"));
         assert!(help.contains("选项 (Options):"));
         assert!(help.contains("--format <format>"));
         assert!(help.contains("--mode <mode>"));
-        assert!(help.contains("gist *.pdf"));
+        assert!(help.contains("pith *.pdf"));
         assert!(help.contains("示例 (Examples):"));
-        assert!(help.contains("gist report.pdf | llm \"Summarize risks and action items\""));
+        assert!(help.contains("pith report.pdf | llm \"Summarize risks and action items\""));
         assert!(help.contains("显示帮助。"));
         assert!(!help.contains("<输入>"));
         assert!(!help.contains("<格式>"));

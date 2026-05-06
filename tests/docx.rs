@@ -5,7 +5,7 @@
 
 mod common;
 use common::extract_fixture;
-use gist::format::Format;
+use pith::format::Format;
 use insta::assert_snapshot;
 
 #[test]

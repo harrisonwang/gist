@@ -75,30 +75,30 @@ jobs:
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          pkg="gist_${VERSION}_${{ matrix.target }}"
+          pkg="pith_${VERSION}_${{ matrix.target }}"
           rm -rf package out
-          mkdir -p package/gist out
-          cp "target/${{ matrix.target }}/release/gist${{ matrix.exe_ext }}" "package/gist/gist${{ matrix.exe_ext }}"
-          cp README.md "package/gist/" || true
-          tar -C package -czf "out/${pkg}.tar.gz" gist
+          mkdir -p package/pith out
+          cp "target/${{ matrix.target }}/release/pith${{ matrix.exe_ext }}" "package/pith/pith${{ matrix.exe_ext }}"
+          cp README.md "package/pith/" || true
+          tar -C package -czf "out/${pkg}.tar.gz" pith
 
       - name: Package (zip)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $pkg = "gist_${env:VERSION}_${{ matrix.target }}"
+          $pkg = "pith_${env:VERSION}_${{ matrix.target }}"
           Remove-Item -Recurse -Force package -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force out -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path package\gist | Out-Null
+          New-Item -ItemType Directory -Force -Path package\pith | Out-Null
           New-Item -ItemType Directory -Force -Path out | Out-Null
-          Copy-Item "target\${{ matrix.target }}\release\gist${{ matrix.exe_ext }}" "package\gist\gist${{ matrix.exe_ext }}"
-          Copy-Item "README.md" "package\gist\README.md"
-          Compress-Archive -Path "package\gist" -DestinationPath "out\$pkg.zip" -Force
+          Copy-Item "target\${{ matrix.target }}\release\pith${{ matrix.exe_ext }}" "package\pith\pith${{ matrix.exe_ext }}"
+          Copy-Item "README.md" "package\pith\README.md"
+          Compress-Archive -Path "package\pith" -DestinationPath "out\$pkg.zip" -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gist_${{ matrix.target }}
+          name: pith_${{ matrix.target }}
           path: |
             out/*.tar.gz
             out/*.zip
@@ -151,7 +151,7 @@ jobs:
           fi
 
           payload="$(jq -n \
-            --arg tool "gist" \
+            --arg tool "pith" \
             --arg tag "$TAG" \
             --arg repo "$REPO" \
             '{event_type:"tool-released", client_payload:{tool:$tool, tag:$tag, repo:$repo}}')"

@@ -1,6 +1,6 @@
 # 工程决策
 
-本文档记录 `gist` 的 LLM-oriented extraction contract。它不是为了复刻 `extract-text` 的逐字输出，而是为了把不同文件格式转换成更适合 LLM 和 Agent 使用的文本表示。
+本文档记录 `pith` 的 LLM-oriented extraction contract。它不是为了复刻 `extract-text` 的逐字输出，而是为了把不同文件格式转换成更适合 LLM 和 Agent 使用的文本表示。
 
 当前只定义两种输出模式（均面向 LLM / Agent；名称表示 **stdout 形态**）：
 
@@ -46,7 +46,7 @@
 ```json
 {
   "mode": "json",
-  "schema_version": "gist-json-v0",
+  "schema_version": "pith-json-v0",
   "status": "placeholder",
   "format": "docx",
   "source": "report.docx",
@@ -249,7 +249,7 @@ CSV 不应默认做强类型推断，因为 CSV 本质是文本格式。
 - total extracted text cap
 - service-limits 模式
 
-`gist` 目前还没有完整实现这些能力。下一阶段应优先补一个统一的 ZIP 读取层，让 DOCX/XLSX/PPTX/EPUB 共用限制逻辑，而不是每个 extractor 自己 `read_to_string`。
+`pith` 目前还没有完整实现这些能力。下一阶段应优先补一个统一的 ZIP 读取层，让 DOCX/XLSX/PPTX/EPUB 共用限制逻辑，而不是每个 extractor 自己 `read_to_string`。
 
 这是服务化和 Agent 自动调用场景的前置条件。
 

@@ -536,27 +536,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gist"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "calamine",
- "chardetng",
- "clap",
- "csv",
- "encoding_rs",
- "glob",
- "insta",
- "pdf-extract",
- "quick-xml 0.36.2",
- "scraper",
- "serde_json",
- "ureq",
- "url",
- "zip",
-]
-
-[[package]]
 name = "glob"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1027,6 +1006,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67eabc2ef2a60eb7faa00097bd1ffdb5bd28e62bf39990626a582201b7a754e5"
 dependencies = [
  "siphasher 1.0.2",
+]
+
+[[package]]
+name = "pith"
+version = "0.3.0"
+dependencies = [
+ "anyhow",
+ "calamine",
+ "chardetng",
+ "clap",
+ "csv",
+ "encoding_rs",
+ "glob",
+ "insta",
+ "pdf-extract",
+ "quick-xml 0.36.2",
+ "scraper",
+ "serde_json",
+ "ureq",
+ "url",
+ "zip",
 ]
 
 [[package]]

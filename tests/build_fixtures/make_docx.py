@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build DOCX fixtures for the gist test suite.
+Build DOCX fixtures for the pith test suite.
 
 Each fixture targets a specific category of behavior the extractor must handle.
 We use python-docx for natural docs and zipfile+raw XML for edge cases that
