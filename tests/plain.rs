@@ -2,7 +2,7 @@
 
 mod common;
 use common::extract_fixture;
-use pith::format::Format;
+use pith::Format;
 use serde_json::Value;
 use std::path::Path;
 use std::process::Command;

@@ -39,15 +39,13 @@ pub fn extract(source: &Source) -> Result<String> {
                     out.push('\n');
                 }
             }
-            "markdown" => {
-                if !src.trim().is_empty() {
-                    if !out.is_empty() {
-                        out.push('\n');
-                    }
-                    out.push_str(&src);
-                    if !src.ends_with('\n') {
-                        out.push('\n');
-                    }
+            "markdown" if !src.trim().is_empty() => {
+                if !out.is_empty() {
+                    out.push('\n');
+                }
+                out.push_str(&src);
+                if !src.ends_with('\n') {
+                    out.push('\n');
                 }
             }
             "code" => {

@@ -2,8 +2,8 @@
 
 mod common;
 use common::{extract_fixture, extract_fixture_err};
-use pith::format::Format;
 use insta::assert_snapshot;
+use pith::Format;
 
 #[test]
 fn markdown_and_code_cells() {

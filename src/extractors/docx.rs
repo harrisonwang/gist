@@ -1,10 +1,10 @@
+use crate::limits;
 use crate::output::MarkdownBuilder;
 use crate::source::Source;
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::reader::Reader;
 use std::collections::HashMap;
-use std::io::{Cursor, Read};
 
 /// DOCX → Markdown-like text (md output mode).
 ///
@@ -12,14 +12,17 @@ use std::io::{Cursor, Read};
 /// keeps custom-prefix OOXML fixtures working without relying on version-
 /// sensitive namespace-reader APIs.
 pub fn extract(source: &Source) -> Result<String> {
-    let cursor = Cursor::new(source.bytes());
-    let mut zip = zip::ZipArchive::new(cursor).context("failed to open docx archive")?;
+    let mut zip = limits::open_zip_archive(source.bytes(), "docx")?;
 
-    let styles_xml = read_zip_text(&mut zip, "word/styles.xml").unwrap_or_default();
-    let numbering_xml = read_zip_text(&mut zip, "word/numbering.xml").unwrap_or_default();
-    let footnotes_xml = read_zip_text(&mut zip, "word/footnotes.xml").unwrap_or_default();
-    let rels_xml = read_zip_text(&mut zip, "word/_rels/document.xml.rels").unwrap_or_default();
-    let document_xml = read_zip_text(&mut zip, "word/document.xml")
+    let styles_xml =
+        limits::read_zip_text_optional(&mut zip, "word/styles.xml")?.unwrap_or_default();
+    let numbering_xml =
+        limits::read_zip_text_optional(&mut zip, "word/numbering.xml")?.unwrap_or_default();
+    let footnotes_xml =
+        limits::read_zip_text_optional(&mut zip, "word/footnotes.xml")?.unwrap_or_default();
+    let rels_xml = limits::read_zip_text_optional(&mut zip, "word/_rels/document.xml.rels")?
+        .unwrap_or_default();
+    let document_xml = limits::read_zip_text_optional(&mut zip, "word/document.xml")?
         .ok_or_else(|| anyhow!("docx missing word/document.xml"))?;
 
     let style_map = parse_styles(&styles_xml);
@@ -37,16 +40,6 @@ pub fn extract(source: &Source) -> Result<String> {
         &mut md,
     )?;
     Ok(md.build())
-}
-
-fn read_zip_text<R: std::io::Read + std::io::Seek>(
-    zip: &mut zip::ZipArchive<R>,
-    name: &str,
-) -> Option<String> {
-    let mut file = zip.by_name(name).ok()?;
-    let mut s = String::new();
-    file.read_to_string(&mut s).ok()?;
-    Some(s)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -262,11 +255,9 @@ fn parse_footnotes(xml: &str) -> HashMap<String, String> {
                 b"del" => in_deleted += 1,
                 _ => {}
             },
-            Ok(Event::Text(t)) => {
-                if current_id.is_some() && in_deleted == 0 {
-                    let s = t.unescape().map(|c| c.into_owned()).unwrap_or_default();
-                    current_text.push_str(&s);
-                }
+            Ok(Event::Text(t)) if current_id.is_some() && in_deleted == 0 => {
+                let s = t.unescape().map(|c| c.into_owned()).unwrap_or_default();
+                current_text.push_str(&s);
             }
             Ok(Event::End(e)) => match e.local_name().as_ref() {
                 b"footnote" => {
@@ -403,11 +394,9 @@ fn render_document(
                 b"br" => push_text(&mut paragraph, "\n", false, false, &hyperlink_target),
                 _ => {}
             },
-            Ok(Event::Text(t)) => {
-                if in_run && in_deleted == 0 {
-                    let s = t.unescape().map(|c| c.into_owned()).unwrap_or_default();
-                    push_text(&mut paragraph, &s, run_bold, run_italic, &hyperlink_target);
-                }
+            Ok(Event::Text(t)) if in_run && in_deleted == 0 => {
+                let s = t.unescape().map(|c| c.into_owned()).unwrap_or_default();
+                push_text(&mut paragraph, &s, run_bold, run_italic, &hyperlink_target);
             }
             Ok(Event::End(e)) => match e.local_name().as_ref() {
                 b"r" => in_run = false,

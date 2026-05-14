@@ -1,0 +1,168 @@
+# pith 产品规划与市场分析
+
+> 离线、单二进制、CLI-first、LLM-friendly、可定位
+
+## 核心判断
+
+`pith` 不需要做 MCP server，也不需要把自己包装成 Agent framework 的一部分。
+
+它更应该成为一个稳定、轻量、可脚本化的 CLI 工具：把 PDF、DOCX、XLSX、PPTX、EPUB、IPYNB、CSV、HTML/URL 转成低噪声、结构清楚、适合 LLM 直接读取的 Markdown / JSON。
+
+最重要的产品哲学：
+
+| 坚持 | 不追 |
+|------|------|
+| 本地、离线、单二进制 | 云服务 |
+| CLI-first，能被任何工具调用 | 重 UI / GUI |
+| LLM-friendly Markdown / JSON | Agent 平台 |
+| 结构清楚、token 经济 | 像素级还原 |
+| 可定位、可追溯 | 全自动理解一切文档 |
+
+---
+
+## 1. 事实核查表
+
+| 项目 | 复核状态 | 对 pith 的意义 | 来源 |
+|------|----------|----------------|------|
+| MarkItDown | 约 123k stars；README 明确面向 LLM Markdown，支持 PDF/Office/HTML；PDF 结构、Markdown、编码类 issue 仍存在 | 市场验证“文档转 LLM 输入”需求很大，但 PDF 质量仍是机会点 | [repo](https://github.com/microsoft/markitdown), [#41](https://github.com/microsoft/markitdown/issues/41), [#206](https://github.com/microsoft/markitdown/issues/206), [#296](https://github.com/microsoft/markitdown/issues/296), [#1290](https://github.com/microsoft/markitdown/issues/1290) |
+| Docling | 约 59.7k stars；支持高级 PDF、OCR、JSON、本地执行、复杂文档理解 | Docling 是“大而全/ML 文档智能”标杆，pith 不该正面复制，应做轻量确定性入口 | [repo](https://github.com/docling-project/docling), [docs](https://docling-project.github.io/docling/) |
+| Docling 轻量安装痛点 | #2481 CPU-only 已关闭；#2393 lightweight installation 仍开放 | 说明“轻依赖、单二进制”是真需求 | [#2481](https://github.com/docling-project/docling/issues/2481), [#2393](https://github.com/docling-project/docling/issues/2393) |
+| Marker | 约 35.1k stars；GPL-3.0；模型商业限制；每 worker 峰值约 5GB VRAM | Marker 强在高精度 PDF/OCR，pith 应避免进入重模型战场 | [repo](https://github.com/datalab-to/marker) |
+| anytomd-rs | 36 stars；Apache-2.0；README 明确 PDF out of scope | pith 的机会是“anytomd-rs 的轻量 Rust 路线 + 实际覆盖 PDF” | [repo](https://github.com/developer0hye/anytomd-rs) |
+| LlamaParse | 商业平台；Free 10K credits，Starter $50，Pro $500，1,000 credits = $1.25；支持 JSON、bounding boxes、citations | 证明“高质量解析/可引用”有人付费，但 pith 的机会是离线低成本 | [pricing](https://www.llamaindex.ai/pricing) |
+| Jina Reader | 约 10.8k stars；核心是 URL/read/search，支持 token budget、markdown chunking | Web/URL 方向已有强工具，pith 不应主攻爬虫 | [repo](https://github.com/jina-ai/reader) |
+| Firecrawl | 约 120k stars；AGPL-3.0；主战场是 search/scrape/crawl | pith 不该做 Firecrawl 式爬虫 SaaS | [repo](https://github.com/firecrawl/firecrawl) |
+
+---
+
+## 2. 市场分层表
+
+| 层级 | 本质问题 | 代表工具 | 用户真实想要 | pith 应站的位置 | 来源 |
+|------|----------|----------|--------------|-----------------|------|
+| L1 文本化 | 把字捞出来 | pdftotext、pdfminer、textract | 能跑、不崩、输出不空 | pith 已超过这个层级，不应退化成纯 text dump | [Poppler pdftotext](https://poppler.freedesktop.org/), [pdfminer.six](https://github.com/pdfminer/pdfminer.six), [textract](https://github.com/deanmalmgren/textract) |
+| L2 结构化 | 保标题、列表、表格、sheet、slide | MarkItDown、Pandoc、Docling、Marker、anytomd-rs | LLM 能读懂结构 | pith 当前主战场 | [MarkItDown](https://github.com/microsoft/markitdown), [Pandoc](https://pandoc.org/), [Docling](https://github.com/docling-project/docling), [Marker](https://github.com/datalab-to/marker), [anytomd-rs](https://github.com/developer0hye/anytomd-rs) |
+| L3 可定位/可追溯 | page、slide、sheet、row range、block anchor | LlamaParse、Docling、OpenAI File Search、Claude citations | LLM 输出能回到原文位置 | pith 下一阶段的差异化 | [LlamaParse pricing](https://www.llamaindex.ai/pricing), [Docling](https://docling-project.github.io/docling/), [OpenAI File Search](https://developers.openai.com/api/docs/guides/tools-file-search), [Claude citations](https://platform.claude.com/docs/en/build-with-claude/citations) |
+| L4 智能理解 | OCR、图表理解、复杂表格、VLM 修复 | Marker、Docling、Mistral OCR、Azure Document Intelligence | 扫描件/图表也能读 | pith 可做可选插件，不应默认主线 | [Marker](https://github.com/datalab-to/marker), [Docling](https://github.com/docling-project/docling), [Mistral OCR](https://docs.mistral.ai/capabilities/OCR/basic_ocr/), [Azure Document Intelligence](https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/) |
+
+---
+
+## 3. 痛点表
+
+| 痛点 | 真实表现 | 事实支撑 | pith 应怎么解 | 来源 |
+|------|----------|----------|---------------|------|
+| PDF 转 Markdown 经常只剩 raw text | 标题、表格、页边界、阅读顺序丢失 | MarkItDown #41 要求保 PDF tables/titles；#206 反馈 extraction is not in markdown | P0 做 `## Page N`、页眉页脚去重、断词修复、基础 page anchor | [MarkItDown #41](https://github.com/microsoft/markitdown/issues/41), [MarkItDown #206](https://github.com/microsoft/markitdown/issues/206) |
+| Python/PyTorch 依赖重 | CI、内网、macOS、无 GPU 环境部署麻烦 | anytomd-rs README 把 Python runtime/dependency hell 当核心卖点；Docling 有 lightweight/CPU-only issue | 保持 Rust 单二进制，不默认引入模型/OCR | [anytomd-rs](https://github.com/developer0hye/anytomd-rs), [Docling #2393](https://github.com/docling-project/docling/issues/2393), [Docling #2481](https://github.com/docling-project/docling/issues/2481) |
+| LLM context 被污染 | 一份长 PDF/Excel 直接塞上下文，token 浪费且模型找不到中间证据 | Lost in the Middle 论文说明长上下文中间信息利用不稳；OpenAI File Search 支持结果返回和 metadata filtering | 做 `pith chunk`、token budget、warnings、source anchors | [Lost in the Middle](https://arxiv.org/abs/2307.03172), [OpenAI File Search](https://developers.openai.com/api/docs/guides/tools-file-search) |
+| 大表打爆 token | XLSX/CSV 转 GFM table，几千行直接不可用 | pith README 已列“大表策略待补”；Jina Reader 已提供 token budget/chunking 类控制 | 小表 GFM，中表 fenced TSV，超大表摘要 + row/col range | [pith README](../README.md), [Jina Reader](https://github.com/jina-ai/reader) |
+| SaaS 不能处理敏感文件 | 合规、投研、法务、银行内网不能上传 | LlamaParse 是商业平台；Docling 强调 local/air-gapped | pith 明确主打本地、离线、可审计 | [LlamaParse pricing](https://www.llamaindex.ai/pricing), [Docling](https://github.com/docling-project/docling) |
+| ZIP/Office 安全风险 | DOCX/XLSX/PPTX/EPUB 都是 ZIP 容器，可能有 zip bomb | OWASP 文件上传指南明确提 ZIP/XML bombs、parser exploit、解压后大小限制 | 统一 ZIP 防御层：entry cap、ratio cap、total cap | [OWASP File Upload](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html) |
+
+---
+
+## 4. 爽点表
+
+| 爽点 | 用户感受 | 已验证信号 | 产品化方向 | 来源 |
+|------|----------|------------|-----------|------|
+| 一行命令 | `pith report.pdf \| llm "总结风险"` | MarkItDown、anytomd-rs、Firecrawl 都把 CLI/API 简洁作为入口 | 保持 CLI 极简，默认 md | [MarkItDown](https://github.com/microsoft/markitdown), [anytomd-rs](https://github.com/developer0hye/anytomd-rs), [Firecrawl](https://github.com/firecrawl/firecrawl) |
+| 单二进制 | 不装 Python、不拉模型、不配环境 | anytomd-rs 明确用 pure Rust/zero runtime 做卖点 | release 做好 Homebrew/cargo-binstall/winget | [anytomd-rs](https://github.com/developer0hye/anytomd-rs), [cargo-binstall](https://github.com/cargo-bins/cargo-binstall), [Homebrew](https://brew.sh/) |
+| 离线隐私 | 敏感文件不出机器 | Docling、LlamaParse 都把敏感/企业/合规作为卖点 | 默认 no network；URL fetch 也要可控 | [Docling](https://github.com/docling-project/docling), [LlamaParse pricing](https://www.llamaindex.ai/pricing) |
+| 可定位 | 回答能说“第 47 页，第 3 个表” | LlamaParse 列出 bounding boxes、citations、JSON；OpenAI File Search 支持返回搜索结果和 metadata filtering | JSON blocks + source anchor 是关键 | [LlamaParse pricing](https://www.llamaindex.ai/pricing), [OpenAI File Search](https://developers.openai.com/api/docs/guides/tools-file-search) |
+| 低 token 噪声 | LLM 看到正文，不看字体/边距/装饰 | pith 工程决策已明确丢弃视觉样式、保语义结构 | 加 `--inspect` 显示 token 估算和 truncation | [pith engineering decisions](ENGINEERING_DECISIONS.md) |
+| CLI 易集成 | Claude Code、Codex、Cursor、shell、CI 都能直接调 | MarkItDown、anytomd-rs、Firecrawl 都提供 CLI/API 使用方式 | 继续把 CLI 作为一等入口，不做 MCP 依赖 | [MarkItDown CLI](https://github.com/microsoft/markitdown), [anytomd-rs CLI](https://github.com/developer0hye/anytomd-rs), [Firecrawl CLI](https://github.com/firecrawl/firecrawl) |
+
+---
+
+## 5. 人群与场景表
+
+| 人群 | 场景故事 | 他们的痛 | pith 的承诺 | 来源 |
+|------|----------|----------|------------|------|
+| Claude Code / Codex / Cursor 用户 | 工程师收到 38 页 RFP.docx，要让 coding assistant 读取需求并辅助改接口 | 不想装 Docling，不想上传 SaaS，不想手动转格式 | `pith RFP.docx` 或 `pith RFP.docx -m json`，保标题/表格/链接/anchor | [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code/overview), [Codex docs](https://developers.openai.com/codex/), [Cursor](https://cursor.com/) |
+| RAG/知识库工程师 | 要把 2,000 份 PDF/DOCX/PPTX 进向量库 | chunk 粗糙、引用不准、噪声多 | block JSON + heading/page aware chunks | [OpenAI File Search](https://developers.openai.com/api/docs/guides/tools-file-search), [LlamaIndex](https://www.llamaindex.ai/) |
+| 投研/财务分析 | 处理 10-K、财报 PDF、Excel sheet | 大表爆 token，合规禁止上传 | 本地解析，表格降级，page/sheet/row anchors | [SEC EDGAR](https://www.sec.gov/edgar), [LlamaParse pricing](https://www.llamaindex.ai/pricing) |
+| 法务/合规 | 审合同、批注、脚注、修订记录 | 需要证据链，不需要漂亮排版 | DOCX comments/endnotes/tracked changes mode | [Open XML SDK](https://learn.microsoft.com/en-us/office/open-xml/open-xml-sdk), [pith DOCX matrix](test-matrix/docx.md) |
+| SRE/文档 CI | release notes、docs pipeline 自动转换 | Python 依赖慢、CI cache 麻烦 | 静态 CLI，可 pin 版本，输出稳定 | [GitHub Actions](https://docs.github.com/en/actions), [cargo-binstall](https://github.com/cargo-bins/cargo-binstall) |
+| 研究生/个人知识工作流 | `pith paper.pdf \| llm "总结 methods"` | 不想记一堆工具 | 一个命令覆盖常见格式 | [llm CLI](https://github.com/simonw/llm), [arXiv](https://arxiv.org/) |
+
+---
+
+## 6. 路线图表
+
+### P0 - 必须做
+
+| 功能 | 解决什么真实问题 | 验收标准 | 来源 |
+|------|------------------|----------|------|
+| Block-oriented JSON v1 | Markdown 适合人读，但程序/RAG 需要稳定字段 | `blocks[]` 有 `kind/text/source_anchor/page/slide/sheet/row_range/truncated/warnings` | [pith README](../README.md), [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs) |
+| PDF page boundary | LLM 回答无法回到页码 | 多页 PDF 输出 `## Page N` 或 JSON page anchor | [pith PDF matrix](test-matrix/pdf.md), [MarkItDown #41](https://github.com/microsoft/markitdown/issues/41) |
+| 大表三档降级 | XLSX/CSV 打爆 token | 小表 GFM；中表 fenced TSV；超大表摘要 + range + truncation | [pith XLSX matrix](test-matrix/xlsx.md), [Jina Reader token budget](https://github.com/jina-ai/reader) |
+| ZIP 安全层 | Office/EPUB 自动处理有 zip bomb 风险 | DOCX/XLSX/PPTX/EPUB 共用 entry cap、ratio cap、total cap | [OWASP File Upload](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html), [pith adversarial matrix](test-matrix/adversarial.md) |
+
+### P1 - 重要
+
+| 功能 | 解决什么真实问题 | 验收标准 | 来源 |
+|------|------------------|----------|------|
+| stdin/pipe | shell 一等公民 | `cat file.csv \| pith --format csv -` | [MarkItDown CLI](https://github.com/microsoft/markitdown), [anytomd-rs CLI](https://github.com/developer0hye/anytomd-rs) |
+| `pith inspect` | 用户不知道抽取质量 | 输出 warnings、页数、block 数、token 估算、截断信息 | [Jina Reader token budget](https://github.com/jina-ai/reader), [pith engineering decisions](ENGINEERING_DECISIONS.md) |
+| `pith chunk` | RAG/LLM 不能只按固定长度切 | 按 heading/page/table/slide 分块 | [OpenAI File Search](https://developers.openai.com/api/docs/guides/tools-file-search), [Lost in the Middle](https://arxiv.org/abs/2307.03172) |
+| EPUB/HTML renderer 统一 | EPUB 正文结构弱 | EPUB chapter 内 heading/list/link/table 正常保留 | [pith EPUB matrix](test-matrix/epub.md), [pith HTML matrix](test-matrix/html.md) |
+
+### P2 - 优化
+
+| 功能 | 解决什么真实问题 | 验收标准 | 来源 |
+|------|------------------|----------|------|
+| pith-core library | Rust 生态嵌入 | `cargo add pith-core` 可直接 document -> blocks | [crates.io](https://crates.io/), [anytomd-rs](https://github.com/developer0hye/anytomd-rs) |
+| 分发完善 | 降低安装摩擦 | Homebrew、cargo-binstall、winget、apt | [Homebrew](https://brew.sh/), [cargo-binstall](https://github.com/cargo-bins/cargo-binstall), [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) |
+
+### P3 - 长期
+
+| 功能 | 解决什么真实问题 | 验收标准 | 来源 |
+|------|------------------|----------|------|
+| 可选 OCR/VLM backend | 扫描件和图表 | 默认关闭，按页 fallback，保留成本/warning | [Marker](https://github.com/datalab-to/marker), [Mistral OCR](https://docs.mistral.ai/capabilities/OCR/basic_ocr/), [Azure Document Intelligence](https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/) |
+
+---
+
+## 7. 做与不做
+
+| 方向 | 判断 | 原因 | 来源 |
+|------|------|------|------|
+| Block JSON | 必做 | 这是 pith 从“Markdown 转换工具”变成“可程序化文档预处理器”的关键 | [pith README](../README.md), [OpenAI File Search](https://developers.openai.com/api/docs/guides/tools-file-search) |
+| PDF 基础结构 | 必做 | PDF 是最痛格式，anytomd-rs 放弃了，pith 可形成差异 | [anytomd-rs](https://github.com/developer0hye/anytomd-rs), [MarkItDown #41](https://github.com/microsoft/markitdown/issues/41) |
+| 大表策略 | 必做 | 真实财务/运营/CSV 场景高频，且符合 token 经济 | [pith XLSX matrix](test-matrix/xlsx.md), [Jina Reader](https://github.com/jina-ai/reader) |
+| ZIP 防御 | 必做 | 自动调用和批处理前置条件 | [OWASP File Upload](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html) |
+| OCR | 暂不做默认 | 会引入模型、依赖、速度和维护复杂度；可做插件 | [Marker](https://github.com/datalab-to/marker), [Mistral OCR](https://docs.mistral.ai/capabilities/OCR/basic_ocr/) |
+| LLM 增强 | 暂不做默认 | 破坏离线、确定性、低成本定位 | [MarkItDown OCR plugin](https://github.com/microsoft/markitdown), [Marker LLM mode](https://github.com/datalab-to/marker) |
+| 云服务 | 不优先 | Firecrawl/LlamaParse/Jina 已很强，个人项目不该正面卷 | [Firecrawl](https://github.com/firecrawl/firecrawl), [LlamaParse](https://www.llamaindex.ai/pricing), [Jina Reader](https://github.com/jina-ai/reader) |
+| GUI | 不优先 | 目标人群在 CLI、CI、LLM 工具链里 | [MarkItDown CLI](https://github.com/microsoft/markitdown), [anytomd-rs CLI](https://github.com/developer0hye/anytomd-rs) |
+| 格式互转 | 不做 | Pandoc/LibreOffice 地盘，和 pith 核心目标偏离 | [Pandoc](https://pandoc.org/), [LibreOffice](https://www.libreoffice.org/) |
+| MCP server | 不做近期重点 | Claude Code / Codex / Cursor 直接 CLI 调用已经够了；MCP 会增加维护面 | [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code/overview), [Codex docs](https://developers.openai.com/codex/) |
+
+---
+
+## 8. 最终定位表
+
+| 维度 | pith 应该坚持 | 不该追求 | 来源 |
+|------|---------------|----------|------|
+| 产品一句话 | LLM 时代的离线文档预处理 CLI | Agent 平台 / 文档智能 SaaS | [MarkItDown](https://github.com/microsoft/markitdown), [Docling](https://github.com/docling-project/docling) |
+| 默认形态 | Rust CLI + library | Python ML 框架 / SaaS / MCP server | [anytomd-rs](https://github.com/developer0hye/anytomd-rs), [LlamaParse](https://www.llamaindex.ai/pricing) |
+| 输出核心 | Markdown + JSON blocks + anchors | 像素级还原 | [pith README](../README.md), [Pandoc](https://pandoc.org/) |
+| 质量标准 | 结构清楚、token 经济、可定位、可审计 | 人眼排版漂亮 | [pith engineering decisions](ENGINEERING_DECISIONS.md), [Lost in the Middle](https://arxiv.org/abs/2307.03172) |
+| 目标格式 | PDF/DOCX/XLSX/PPTX/EPUB/IPYNB/CSV/HTML/text | 图片 OCR/手写/复杂扫描件优先 | [pith README](../README.md), [Marker](https://github.com/datalab-to/marker) |
+| 护城河 | 单二进制 + 离线 + LLM-friendly + 可定位 | 模型精度、OCR 榜单、爬虫规模 | [anytomd-rs](https://github.com/developer0hye/anytomd-rs), [Firecrawl](https://github.com/firecrawl/firecrawl), [Docling](https://github.com/docling-project/docling) |
+
+---
+
+## 执行优先级
+
+建议顺序：
+
+1. JSON block schema
+2. PDF page boundary
+3. 大表降级
+4. ZIP 安全层
+5. stdin/pipe
+6. `pith inspect`
+7. `pith chunk`
+8. EPUB/HTML renderer 统一
+
+这套顺序更符合现在的产品定位：
+
+不是“Agent 能信任的文件入口”，而是 **“LLM 能直接读、开发者能稳定脚本化调用的离线文档预处理器”**。

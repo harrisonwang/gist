@@ -4,7 +4,7 @@
 
 mod common;
 use common::extract_fixture_err;
-use pith::format::Format;
+use pith::Format;
 
 #[test]
 fn empty_file_treated_as_docx() {
@@ -46,8 +46,12 @@ fn compression_bomb_rejected_when_capped() {
     // we can verify the extractor at least *completes* without exploding.
     // A proper implementation would expose a configurable cap.
     let path = "tests/fixtures/adversarial/05_compression_bomb.docx";
-    let source = pith::source::Source::resolve(path).unwrap();
-    let result = pith::extractors::extract(&source, Format::Docx);
+    let result = pith::extract_document(
+        path,
+        &pith::ExtractOptions {
+            format: Some(Format::Docx),
+        },
+    );
     // Either succeeds (with whatever content) or fails cleanly.
     let _ = result; // we just want no panic
 }

@@ -1,4 +1,4 @@
-/// Common helpers for extractors.
+//! Common helpers for extractors.
 
 pub struct MarkdownBuilder {
     buf: String,

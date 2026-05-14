@@ -27,7 +27,7 @@ pub fn extract(source: &Source) -> Result<String> {
             break;
         }
         let rec = rec?;
-        rows.push(rec.iter().map(|s| sanitize(s)).collect());
+        rows.push(rec.iter().map(sanitize).collect());
     }
 
     if rows.is_empty() {

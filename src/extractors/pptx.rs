@@ -1,14 +1,13 @@
+use crate::limits;
 use crate::output::MarkdownBuilder;
 use crate::source::Source;
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::reader::Reader;
-use std::io::{Cursor, Read};
 use std::path::{Component, Path};
 
 pub fn extract(source: &Source) -> Result<String> {
-    let cursor = Cursor::new(source.bytes());
-    let mut zip = zip::ZipArchive::new(cursor).context("failed to open pptx")?;
+    let mut zip = limits::open_zip_archive(source.bytes(), "pptx")?;
 
     // Collect ppt/slides/slideN.xml entries, sort by N.
     let mut slides: Vec<(u32, String)> = Vec::new();
@@ -22,24 +21,14 @@ pub fn extract(source: &Source) -> Result<String> {
     let mut md = MarkdownBuilder::new();
     for (n, name) in &slides {
         md.heading(2, &format!("Slide {n}"));
-        let xml = read_zip_text(&mut zip, name)?;
+        let xml = limits::read_zip_text(&mut zip, name)?;
         render_slide(&xml, &mut md)?;
         if let Some(notes_name) = notes_slide_for(&mut zip, name)? {
-            let notes_xml = read_zip_text(&mut zip, &notes_name)?;
+            let notes_xml = limits::read_zip_text(&mut zip, &notes_name)?;
             render_notes(&notes_xml, &mut md)?;
         }
     }
     Ok(md.build())
-}
-
-fn read_zip_text<R: std::io::Read + std::io::Seek>(
-    zip: &mut zip::ZipArchive<R>,
-    name: &str,
-) -> Result<String> {
-    let mut file = zip.by_name(name)?;
-    let mut xml = String::new();
-    file.read_to_string(&mut xml)?;
-    Ok(xml)
 }
 
 fn slide_number(name: &str) -> Option<u32> {
@@ -205,9 +194,9 @@ fn notes_slide_for<R: std::io::Read + std::io::Seek>(
         return Ok(None);
     };
     let rels_name = format!("ppt/slides/_rels/{file_name}.rels");
-    let rels_xml = match read_zip_text(zip, &rels_name) {
-        Ok(xml) => xml,
-        Err(_) => return Ok(None),
+    let rels_xml = match limits::read_zip_text_optional(zip, &rels_name)? {
+        Some(xml) => xml,
+        None => return Ok(None),
     };
     let Some(target) = parse_notes_target(&rels_xml) else {
         return Ok(None);

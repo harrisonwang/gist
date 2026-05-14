@@ -1,4 +1,4 @@
-name: build-and-release
+name: release
 
 on:
   workflow_dispatch:
@@ -71,29 +71,36 @@ jobs:
       - name: Build
         run: cargo build --locked --release --target "${{ matrix.target }}"
 
-      - name: Package (tar.gz)
+      - name: Package and verify (tar.gz)
         if: runner.os != 'Windows'
         shell: bash
         run: |
+          set -euo pipefail
           pkg="pith_${VERSION}_${{ matrix.target }}"
-          rm -rf package out
-          mkdir -p package/pith out
+          rm -rf package out verify
+          mkdir -p package/pith out verify
           cp "target/${{ matrix.target }}/release/pith${{ matrix.exe_ext }}" "package/pith/pith${{ matrix.exe_ext }}"
-          cp README.md "package/pith/" || true
+          cp README.md "package/pith/"
           tar -C package -czf "out/${pkg}.tar.gz" pith
+          tar -xzf "out/${pkg}.tar.gz" -C verify
+          test -x "verify/pith/pith${{ matrix.exe_ext }}"
+          "verify/pith/pith${{ matrix.exe_ext }}" --version
 
-      - name: Package (zip)
+      - name: Package and verify (zip)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $pkg = "pith_${env:VERSION}_${{ matrix.target }}"
           Remove-Item -Recurse -Force package -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force out -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force verify -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path package\pith | Out-Null
           New-Item -ItemType Directory -Force -Path out | Out-Null
           Copy-Item "target\${{ matrix.target }}\release\pith${{ matrix.exe_ext }}" "package\pith\pith${{ matrix.exe_ext }}"
           Copy-Item "README.md" "package\pith\README.md"
           Compress-Archive -Path "package\pith" -DestinationPath "out\$pkg.zip" -Force
+          Expand-Archive -Path "out\$pkg.zip" -DestinationPath verify -Force
+          & "verify\pith\pith${{ matrix.exe_ext }}" --version
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -103,9 +110,9 @@ jobs:
             out/*.tar.gz
             out/*.zip
 
-  release:
+  publish:
     if: github.ref_type == 'tag'
-    name: release
+    name: publish
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -121,7 +128,7 @@ jobs:
           shopt -s nullglob
           files=( *.zip *.tar.gz )
           if ((${#files[@]} == 0)); then
-            echo "no artifacts found"
+            echo "no artifacts found" >&2
             exit 1
           fi
           sha256sum "${files[@]}" > SHA256SUMS.txt
@@ -135,7 +142,7 @@ jobs:
     if: github.ref_type == 'tag'
     name: notify homebrew tap
     runs-on: ubuntu-latest
-    needs: release
+    needs: publish
     steps:
       - name: Dispatch to homebrew-tap
         env:

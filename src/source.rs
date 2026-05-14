@@ -3,6 +3,33 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::time::Duration;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceInput {
+    raw: String,
+}
+
+impl SourceInput {
+    pub fn new(raw: impl Into<String>) -> Self {
+        Self { raw: raw.into() }
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.raw
+    }
+}
+
+impl From<String> for SourceInput {
+    fn from(raw: String) -> Self {
+        Self::new(raw)
+    }
+}
+
+impl From<&str> for SourceInput {
+    fn from(raw: &str) -> Self {
+        Self::new(raw)
+    }
+}
+
 /// A resolved input: either local file bytes or a fetched URL response.
 pub struct Source {
     bytes: Vec<u8>,

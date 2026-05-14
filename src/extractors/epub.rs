@@ -1,22 +1,21 @@
+use crate::limits;
 use crate::output::decode_text;
 use crate::source::Source;
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use quick_xml::events::Event;
 use quick_xml::reader::Reader;
 use scraper::{Html, Selector};
 use std::collections::HashMap;
-use std::io::{Cursor, Read};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub fn extract(source: &Source) -> Result<String> {
-    let cursor = Cursor::new(source.bytes());
-    let mut zip = zip::ZipArchive::new(cursor).context("failed to open epub")?;
+    let mut zip = limits::open_zip_archive(source.bytes(), "epub")?;
 
-    let container_xml = read_zip_text(&mut zip, "META-INF/container.xml")
+    let container_xml = read_zip_text(&mut zip, "META-INF/container.xml")?
         .ok_or_else(|| anyhow!("epub: missing META-INF/container.xml"))?;
     let opf_path = parse_rootfile_path(&container_xml)
         .ok_or_else(|| anyhow!("epub: missing OPF rootfile in container.xml"))?;
-    let opf_xml = read_zip_text(&mut zip, &opf_path)
+    let opf_xml = read_zip_text(&mut zip, &opf_path)?
         .ok_or_else(|| anyhow!("epub: missing OPF package: {opf_path}"))?;
 
     let spine = parse_spine_paths(&opf_xml, &opf_path);
@@ -26,9 +25,7 @@ pub fn extract(source: &Source) -> Result<String> {
 
     let mut out = String::new();
     for name in spine {
-        let mut f = zip.by_name(&name)?;
-        let mut bytes = Vec::new();
-        f.read_to_end(&mut bytes)?;
+        let bytes = limits::read_zip_bytes(&mut zip, &name)?;
         let html = decode_text(&bytes);
         out.push_str(&strip_html(&html));
         out.push('\n');
@@ -39,11 +36,8 @@ pub fn extract(source: &Source) -> Result<String> {
 fn read_zip_text<R: std::io::Read + std::io::Seek>(
     zip: &mut zip::ZipArchive<R>,
     name: &str,
-) -> Option<String> {
-    let mut file = zip.by_name(name).ok()?;
-    let mut bytes = Vec::new();
-    file.read_to_end(&mut bytes).ok()?;
-    Some(decode_text(&bytes))
+) -> Result<Option<String>> {
+    Ok(limits::read_zip_bytes_optional(zip, name)?.map(|bytes| decode_text(&bytes)))
 }
 
 fn parse_rootfile_path(xml: &str) -> Option<String> {
@@ -112,7 +106,7 @@ fn join_opf_relative(opf_path: &str, href: &str) -> String {
     let base = Path::new(opf_path)
         .parent()
         .map(Path::to_path_buf)
-        .unwrap_or_else(PathBuf::new);
+        .unwrap_or_default();
     base.join(href).to_string_lossy().replace('\\', "/")
 }
 

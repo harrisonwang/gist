@@ -2,8 +2,8 @@
 
 mod common;
 use common::extract_fixture;
-use pith::format::Format;
 use insta::assert_snapshot;
+use pith::Format;
 
 #[test]
 fn basic_slides_with_titles_and_bullets() {

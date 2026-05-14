@@ -2,8 +2,15 @@
 name = "pith"
 version = "0.4.0"
 edition = "2024"
+rust-version = "1.85"
 description = "Convert files and URLs to LLM-friendly markdown"
 license = "MIT"
+repository = "https://github.com/harrisonwang/pith"
+homepage = "https://github.com/harrisonwang/pith"
+readme = "README.md"
+keywords = ["markdown", "documents", "llm", "cli", "extract"]
+categories = ["command-line-utilities", "text-processing"]
+default-run = "pith"
 
 [[bin]]
 name = "pith"

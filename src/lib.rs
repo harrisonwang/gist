@@ -1,10 +1,14 @@
-//! Library facade for integration tests.
-//!
-//! `cargo test` builds a separate binary per test file in `tests/`.
-//! Those binaries can't reach into the `pith` binary's modules directly,
-//! so we expose them here.
+//! Public API for converting files and URLs into LLM-friendly text.
 
-pub mod extractors;
-pub mod format;
-pub mod output;
-pub mod source;
+mod extract;
+mod extractors;
+mod format;
+mod limits;
+mod output;
+mod render;
+mod source;
+
+pub use extract::{ExtractOptions, ExtractedDocument, extract_document};
+pub use format::{Format, FormatArg};
+pub use render::{OutputMode, render_documents};
+pub use source::{Source, SourceInput};

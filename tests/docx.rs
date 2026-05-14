@@ -5,8 +5,8 @@
 
 mod common;
 use common::extract_fixture;
-use pith::format::Format;
 use insta::assert_snapshot;
+use pith::Format;
 
 #[test]
 fn basic_headings_and_inline_formatting() {
