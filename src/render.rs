@@ -1,4 +1,7 @@
 use crate::extract::ExtractedDocument;
+use crate::format::Format;
+use crate::json_schema::JsonOutput;
+use anyhow::{Result, anyhow};
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
@@ -16,11 +19,34 @@ impl fmt::Display for OutputMode {
     }
 }
 
-pub fn render_documents(documents: &[ExtractedDocument], mode: OutputMode) -> String {
-    match mode {
-        OutputMode::Md => markdown::render(documents),
-        OutputMode::Json => json::render(documents),
+/// Pick the default output mode given the detected formats of all inputs.
+/// All-table → json, anything else → md.
+pub fn default_mode_for(formats: &[Format]) -> OutputMode {
+    if !formats.is_empty()
+        && formats
+            .iter()
+            .all(|f| matches!(f, Format::Csv | Format::Xlsx))
+    {
+        OutputMode::Json
+    } else {
+        OutputMode::Md
     }
+}
+
+pub fn render_documents(documents: &[ExtractedDocument], mode: OutputMode) -> Result<String> {
+    match mode {
+        OutputMode::Md => Ok(markdown::render(documents)),
+        OutputMode::Json => Err(anyhow!(
+            "--mode json uses table-native extraction and currently supports csv/xlsx only"
+        )),
+    }
+}
+
+pub fn render_json(output: &JsonOutput) -> String {
+    format!(
+        "{}\n",
+        serde_json::to_string(output).expect("serialize table JSON output")
+    )
 }
 
 pub mod markdown {
@@ -57,18 +83,5 @@ pub mod markdown {
 
     fn markdown_heading_text(source: &str) -> String {
         source.replace(['\r', '\n'], " ")
-    }
-}
-
-pub mod json {
-    use crate::extract::ExtractedDocument;
-    use crate::json_schema::JsonOutput;
-
-    pub fn render(documents: &[ExtractedDocument]) -> String {
-        let output = JsonOutput::from_documents(documents);
-        format!(
-            "{}\n",
-            serde_json::to_string(&output).expect("serialize JSON v1 output")
-        )
     }
 }

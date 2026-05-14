@@ -1,7 +1,10 @@
 use crate::cli::Cli;
 use anyhow::{Context, Result, anyhow};
 use glob::{MatchOptions, glob_with};
-use pith::{ExtractOptions, SourceInput, extract_document, render_documents};
+use pith::{
+    ExtractOptions, JsonOutput, OutputMode, SourceInput, TableFilter, default_mode_for, extract_md,
+    extract_table_entries, render_documents, render_json, resolve_input,
+};
 
 pub(crate) fn run(cli: Cli) -> Result<String> {
     let inputs = expand_inputs(&cli.inputs)?;
@@ -9,12 +12,81 @@ pub(crate) fn run(cli: Cli) -> Result<String> {
         format: cli.format.map(Into::into),
     };
 
-    let mut documents = Vec::with_capacity(inputs.len());
-    for input in inputs {
-        documents.push(extract_document(SourceInput::from(input), &options)?);
-    }
+    let resolved = inputs
+        .into_iter()
+        .map(|input| resolve_input(SourceInput::from(input), &options))
+        .collect::<Result<Vec<_>>>()?;
 
-    Ok(render_documents(&documents, cli.mode))
+    let formats: Vec<_> = resolved.iter().map(|r| r.format).collect();
+    let mode = cli.mode.unwrap_or_else(|| default_mode_for(&formats));
+
+    match mode {
+        OutputMode::Md => {
+            warn_unused_narrowing(&cli);
+            let mut documents = Vec::with_capacity(resolved.len());
+            for r in &resolved {
+                documents.push(extract_md(r)?);
+            }
+            render_documents(&documents, mode)
+        }
+        OutputMode::Json => {
+            let filter = build_filter(&cli)?;
+            let mut tables = Vec::new();
+            for r in &resolved {
+                tables.extend(extract_table_entries(r, &filter)?);
+            }
+            Ok(render_json(&JsonOutput::new(tables)))
+        }
+    }
+}
+
+fn build_filter(cli: &Cli) -> Result<TableFilter> {
+    let row_range = match &cli.rows {
+        Some(s) => Some(parse_row_range(s)?),
+        None => None,
+    };
+
+    Ok(TableFilter {
+        sheet: cli.sheet.clone(),
+        row_range,
+        columns: cli.columns.clone(),
+        limit: cli.limit,
+        offset: cli.offset,
+    })
+}
+
+fn parse_row_range(s: &str) -> Result<(usize, usize)> {
+    let (first, last) = s
+        .split_once(':')
+        .ok_or_else(|| anyhow!("--rows expects <first>:<last>, got {s:?}"))?;
+    let first: usize = first
+        .trim()
+        .parse()
+        .map_err(|_| anyhow!("--rows: invalid first row {first:?}"))?;
+    let last: usize = last
+        .trim()
+        .parse()
+        .map_err(|_| anyhow!("--rows: invalid last row {last:?}"))?;
+    if first == 0 || last == 0 {
+        return Err(anyhow!("--rows: row numbers must be >= 1, got {s:?}"));
+    }
+    if first > last {
+        return Err(anyhow!("--rows: first ({first}) > last ({last})"));
+    }
+    Ok((first, last))
+}
+
+fn warn_unused_narrowing(cli: &Cli) {
+    let used = cli.sheet.is_some()
+        || cli.rows.is_some()
+        || !cli.columns.is_empty()
+        || cli.limit.is_some()
+        || cli.offset.is_some();
+    if used {
+        eprintln!(
+            "warning: --sheet/--rows/--columns/--limit/--offset are ignored in markdown mode"
+        );
+    }
 }
 
 fn expand_inputs(inputs: &[String]) -> Result<Vec<String>> {
@@ -131,5 +203,20 @@ mod tests {
         assert!(err.to_string().contains("failed to expand glob"));
         assert!(format!("{err:#}").contains("glob matched no files"));
         Ok(())
+    }
+
+    #[test]
+    fn parse_row_range_accepts_valid_input() {
+        assert_eq!(parse_row_range("5:104").unwrap(), (5, 104));
+        assert_eq!(parse_row_range("1:1").unwrap(), (1, 1));
+        assert_eq!(parse_row_range(" 5 : 104 ").unwrap(), (5, 104));
+    }
+
+    #[test]
+    fn parse_row_range_rejects_invalid_input() {
+        assert!(parse_row_range("5").is_err());
+        assert!(parse_row_range("a:b").is_err());
+        assert!(parse_row_range("104:5").is_err());
+        assert!(parse_row_range("0:10").is_err());
     }
 }

@@ -3,7 +3,6 @@
 mod common;
 use common::extract_fixture;
 use pith::Format;
-use serde_json::Value;
 use std::path::Path;
 use std::process::Command;
 
@@ -77,25 +76,17 @@ fn default_mode_is_markdown_like_text() {
 }
 
 #[test]
-fn json_mode_is_block_schema_v1() {
+fn json_mode_rejects_plain_text() {
     let source = fixture_path("plain/01_ascii.txt");
     let output = pith_bin()
         .args(["--mode", "json", &source])
         .output()
         .expect("run pith");
 
-    assert!(output.status.success());
-    let stdout = String::from_utf8(output.stdout).expect("utf8 stdout");
-    let value: Value = serde_json::from_str(&stdout).expect("json stdout");
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
 
-    assert_eq!(value["mode"], "json");
-    assert_eq!(value["schema_version"], "pith-json-v1");
-    assert!(!value.as_object().unwrap().contains_key("status"));
-    assert!(!value.as_object().unwrap().contains_key("content"));
-
-    let document = &value["documents"][0];
-    assert_eq!(document["format"], "text");
-    assert_eq!(document["source"], source);
-    assert_eq!(document["blocks"][0]["kind"], "paragraph");
-    assert_eq!(document["blocks"][0]["text"], "Hello world\nLine two");
+    let stderr = String::from_utf8(output.stderr).expect("utf8 stderr");
+    assert!(stderr.contains("--mode json currently supports csv and xlsx only"));
+    assert!(stderr.contains("use --mode md"));
 }

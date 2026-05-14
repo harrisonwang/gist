@@ -46,12 +46,13 @@ fn compression_bomb_rejected_when_capped() {
     // we can verify the extractor at least *completes* without exploding.
     // A proper implementation would expose a configurable cap.
     let path = "tests/fixtures/adversarial/05_compression_bomb.docx";
-    let result = pith::extract_document(
+    let result = pith::resolve_input(
         path,
         &pith::ExtractOptions {
             format: Some(Format::Docx),
         },
-    );
+    )
+    .and_then(|resolved| pith::extract_md(&resolved));
     // Either succeeds (with whatever content) or fails cleanly.
     let _ = result; // we just want no panic
 }

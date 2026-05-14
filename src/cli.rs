@@ -13,11 +13,21 @@ Arguments:
 Options:
 {options}
 
+For tables (CSV/XLSX), the recommended pattern is:
+
+  pith file.xlsx                              # see structure + preview
+  pith file.xlsx --sheet L1 --rows 5:104      # read a slice
+  pith file.xlsx --columns 分类,技能          # filter columns
+
+pith is safe to run on arbitrarily large files; JSON output is bounded
+by default (first 100 data rows per table). Use --limit to opt in to more,
+or --rows for an exact Excel row range.
+
 Examples:
   pith report.pdf
-  pith report.docx slides.pptx data.xlsx
+  pith data.xlsx
+  pith data.csv | jq '.tables[]'
   pith https://example.com/article
-  pith -m json notes.md
   pith \"*.pdf\"
   pith report.pdf | llm \"Summarize risks and action items\"
 ";
@@ -42,17 +52,36 @@ pub(crate) struct Cli {
     #[arg(long, value_enum, value_name = "format", hide_possible_values = true)]
     pub(crate) format: Option<FormatArg>,
 
-    /// 输出形态；md 为 Markdown 正文，json 为 JSON blocks；默认 md。
+    /// 覆盖默认输出模式；表格型（CSV/XLSX）默认 json，其他默认 md。
     #[arg(
         long,
         short = 'm',
         value_enum,
-        default_value_t = OutputMode::Md,
         value_name = "mode",
         hide_possible_values = true,
         hide_default_value = true
     )]
-    pub(crate) mode: OutputMode,
+    pub(crate) mode: Option<OutputMode>,
+
+    /// XLSX 限定 sheet；找不到时报错并列出可用 sheets。CSV 无此概念，自动忽略。
+    #[arg(long, value_name = "name")]
+    pub(crate) sheet: Option<String>,
+
+    /// 限定数据行的 Excel 行号区间，例如 `5:104`（含两端）。与 --limit/--offset 互斥。
+    #[arg(long, value_name = "first:last", conflicts_with_all = ["limit", "offset"])]
+    pub(crate) rows: Option<String>,
+
+    /// 按列名筛选，逗号分隔；找不到时报错并列出可用列。
+    #[arg(long, value_name = "columns", value_delimiter = ',')]
+    pub(crate) columns: Vec<String>,
+
+    /// 每个 table 最多返回多少数据行；默认 100。
+    #[arg(long, value_name = "n")]
+    pub(crate) limit: Option<usize>,
+
+    /// 跳过前 N 条数据行再应用 --limit；默认 0。
+    #[arg(long, value_name = "n")]
+    pub(crate) offset: Option<usize>,
 
     /// 显示帮助。
     #[arg(short = 'h', long = "help", action = ArgAction::Help)]
@@ -72,8 +101,13 @@ mod tests {
         let cli = Cli::try_parse_from(["pith", "report.pdf"]).unwrap();
 
         assert_eq!(cli.inputs, ["report.pdf"]);
-        assert_eq!(cli.mode, OutputMode::Md);
+        assert!(cli.mode.is_none());
         assert!(cli.format.is_none());
+        assert!(cli.sheet.is_none());
+        assert!(cli.rows.is_none());
+        assert!(cli.columns.is_empty());
+        assert!(cli.limit.is_none());
+        assert!(cli.offset.is_none());
     }
 
     #[test]
@@ -81,6 +115,48 @@ mod tests {
         let cli = Cli::try_parse_from(["pith", "a.pdf", "b.pdf"]).unwrap();
 
         assert_eq!(cli.inputs, ["a.pdf", "b.pdf"]);
+    }
+
+    #[test]
+    fn explicit_mode_parses() {
+        let cli = Cli::try_parse_from(["pith", "-m", "json", "data.csv"]).unwrap();
+        assert_eq!(cli.mode, Some(OutputMode::Json));
+
+        let cli = Cli::try_parse_from(["pith", "-m", "md", "data.xlsx"]).unwrap();
+        assert_eq!(cli.mode, Some(OutputMode::Md));
+    }
+
+    #[test]
+    fn narrowing_flags_parse() {
+        let cli = Cli::try_parse_from([
+            "pith",
+            "data.xlsx",
+            "--sheet",
+            "L1",
+            "--rows",
+            "5:104",
+            "--columns",
+            "分类,技能",
+        ])
+        .unwrap();
+
+        assert_eq!(cli.sheet, Some("L1".to_string()));
+        assert_eq!(cli.rows, Some("5:104".to_string()));
+        assert_eq!(cli.columns, vec!["分类".to_string(), "技能".to_string()]);
+    }
+
+    #[test]
+    fn rows_conflicts_with_limit() {
+        let err = Cli::try_parse_from(["pith", "data.xlsx", "--rows", "5:104", "--limit", "10"])
+            .unwrap_err();
+        assert_eq!(err.kind(), clap::error::ErrorKind::ArgumentConflict);
+    }
+
+    #[test]
+    fn rows_conflicts_with_offset() {
+        let err = Cli::try_parse_from(["pith", "data.xlsx", "--rows", "5:104", "--offset", "2"])
+            .unwrap_err();
+        assert_eq!(err.kind(), clap::error::ErrorKind::ArgumentConflict);
     }
 
     #[test]
@@ -96,9 +172,16 @@ mod tests {
         assert!(help.contains("Options:"));
         assert!(help.contains("--format <format>"));
         assert!(help.contains("--mode <mode>"));
+        assert!(help.contains("--sheet <name>"));
+        assert!(help.contains("--rows <first:last>"));
+        assert!(help.contains("--columns <columns>"));
+        assert!(help.contains("--limit <n>"));
+        assert!(help.contains("--offset <n>"));
         assert!(help.contains("pith \"*.pdf\""));
         assert!(help.contains("Examples:"));
         assert!(help.contains("pith report.pdf | llm \"Summarize risks and action items\""));
+        assert!(help.contains("--sheet L1 --rows 5:104"));
+        assert!(help.contains("safe to run on arbitrarily large files"));
         assert!(help.contains("显示帮助。"));
         assert!(!help.contains("<输入>"));
         assert!(!help.contains("<格式>"));
