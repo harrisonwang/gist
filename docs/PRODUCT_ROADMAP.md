@@ -91,7 +91,7 @@
 
 | 功能 | 解决什么真实问题 | 验收标准 | 来源 |
 |------|------------------|----------|------|
-| Block-oriented JSON v1 | Markdown 适合人读，但程序/RAG 需要稳定字段 | `blocks[]` 有 `kind/text/source_anchor/page/slide/sheet/row_range/truncated/warnings` | [pith README](../README.md), [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs) |
+| Block-oriented JSON v1 | Markdown 适合人读，但程序/RAG 需要稳定字段 | 第一版已完成：`blocks[]` 有 `kind/text/source_anchor/page/slide/sheet/row_range/truncated/warnings`；当前 anchors 由 Markdown 派生 | [pith README](../README.md), [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs) |
 | PDF page boundary | LLM 回答无法回到页码 | 多页 PDF 输出 `## Page N` 或 JSON page anchor | [pith PDF matrix](test-matrix/pdf.md), [MarkItDown #41](https://github.com/microsoft/markitdown/issues/41) |
 | 大表三档降级 | XLSX/CSV 打爆 token | 小表 GFM；中表 fenced TSV；超大表摘要 + range + truncation | [pith XLSX matrix](test-matrix/xlsx.md), [Jina Reader token budget](https://github.com/jina-ai/reader) |
 | ZIP 安全层 | Office/EPUB 自动处理有 zip bomb 风险 | DOCX/XLSX/PPTX/EPUB 共用 entry cap、ratio cap、total cap | [OWASP File Upload](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html), [pith adversarial matrix](test-matrix/adversarial.md) |
@@ -154,7 +154,7 @@
 
 建议顺序：
 
-1. JSON block schema
+1. JSON block schema（v1 Markdown-derived 已完成；后续补 extractor-native anchors）
 2. PDF page boundary
 3. 大表降级
 4. ZIP 安全层

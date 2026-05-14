@@ -42,7 +42,7 @@ pub(crate) struct Cli {
     #[arg(long, value_enum, value_name = "format", hide_possible_values = true)]
     pub(crate) format: Option<FormatArg>,
 
-    /// 输出形态；md 为 Markdown 正文，json 为占位 JSON envelope；默认 md。
+    /// 输出形态；md 为 Markdown 正文，json 为 JSON blocks；默认 md。
     #[arg(
         long,
         short = 'm',

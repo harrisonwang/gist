@@ -62,37 +62,13 @@ pub mod markdown {
 
 pub mod json {
     use crate::extract::ExtractedDocument;
+    use crate::json_schema::JsonOutput;
 
     pub fn render(documents: &[ExtractedDocument]) -> String {
-        if let [document] = documents {
-            let obj = serde_json::json!({
-                "mode": "json",
-                "schema_version": "pith-json-v0",
-                "status": "placeholder",
-                "content": document.markdown,
-                "format": document.format.to_string(),
-                "source": document.source,
-            });
-            return format!("{obj}\n");
-        }
-
-        let items = documents
-            .iter()
-            .map(|document| {
-                serde_json::json!({
-                    "content": document.markdown,
-                    "format": document.format.to_string(),
-                    "source": document.source,
-                })
-            })
-            .collect::<Vec<_>>();
-
-        let obj = serde_json::json!({
-            "mode": "json",
-            "schema_version": "pith-json-v0",
-            "status": "placeholder",
-            "items": items,
-        });
-        format!("{obj}\n")
+        let output = JsonOutput::from_documents(documents);
+        format!(
+            "{}\n",
+            serde_json::to_string(&output).expect("serialize JSON v1 output")
+        )
     }
 }

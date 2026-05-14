@@ -77,7 +77,7 @@ fn default_mode_is_markdown_like_text() {
 }
 
 #[test]
-fn json_mode_is_flat_placeholder_schema() {
+fn json_mode_is_block_schema_v1() {
     let source = fixture_path("plain/01_ascii.txt");
     let output = pith_bin()
         .args(["--mode", "json", &source])
@@ -89,9 +89,13 @@ fn json_mode_is_flat_placeholder_schema() {
     let value: Value = serde_json::from_str(&stdout).expect("json stdout");
 
     assert_eq!(value["mode"], "json");
-    assert_eq!(value["schema_version"], "pith-json-v0");
-    assert_eq!(value["status"], "placeholder");
-    assert_eq!(value["format"], "text");
-    assert_eq!(value["source"], source);
-    assert_eq!(value["content"], "Hello world\nLine two\n");
+    assert_eq!(value["schema_version"], "pith-json-v1");
+    assert!(!value.as_object().unwrap().contains_key("status"));
+    assert!(!value.as_object().unwrap().contains_key("content"));
+
+    let document = &value["documents"][0];
+    assert_eq!(document["format"], "text");
+    assert_eq!(document["source"], source);
+    assert_eq!(document["blocks"][0]["kind"], "paragraph");
+    assert_eq!(document["blocks"][0]["text"], "Hello world\nLine two");
 }

@@ -13,7 +13,7 @@
 - 本地、离线、单二进制。
 - CLI-first，能被 shell、CI、Claude Code、Codex、Cursor 等直接调用。
 - 默认输出 LLM-friendly Markdown。
-- 后续提供 block-oriented JSON、source anchors、page/slide/sheet/row range。
+- 提供 block-oriented JSON、source anchors、page/slide/sheet/row range。
 - 优先结构清楚、token 经济、可定位、可审计。
 
 不追：
@@ -50,7 +50,7 @@ Arguments:
 
 Options:
       --format <format>  覆盖自动 format 检测；可选：pdf、docx、xlsx、pptx、epub、csv、ipynb、html、markdown、text。
-  -m, --mode <mode>      输出形态；md 为 Markdown 正文，json 为占位 JSON envelope；默认 md。
+  -m, --mode <mode>      输出形态；md 为 Markdown 正文，json 为 JSON blocks；默认 md。
   -h, --help             显示帮助。
   -V, --version          显示版本。
 
@@ -66,7 +66,7 @@ Examples:
 CLI 行为约定：
 
 - 默认 `--mode md`。
-- `--mode json` 当前只输出占位 envelope，不承诺最终 block schema。
+- `--mode json` 输出 `pith-json-v1` blocks；第一版 anchors 由 Markdown 派生。
 - 多输入在 Markdown 模式下按 `# Source: ...` 分块。
 - 本地 glob 由程序内部展开；URL 不参与 glob。
 - `--format` 只覆盖文件/URL 内容格式，不定义 URL 抓取策略。
@@ -108,33 +108,42 @@ extractor 细节保持内部模块，不作为公共 API。未来如果要支持
 
 ### `json`
 
-当前只是占位：
+JSON v1 是当前机器可读输出契约。它不是把完整 Markdown 包一层 JSON，而是输出 block-oriented schema：
 
 ```json
 {
   "mode": "json",
-  "schema_version": "pith-json-v0",
-  "status": "placeholder",
-  "format": "docx",
-  "source": "report.docx",
-  "content": "...markdown body..."
+  "schema_version": "pith-json-v1",
+  "documents": [
+    {
+      "source": "report.docx",
+      "format": "docx",
+      "blocks": [
+        {
+          "id": "b1",
+          "kind": "heading",
+          "text": "Overview",
+          "source_anchor": { "path": ["Overview"] },
+          "truncated": false,
+          "warnings": [],
+          "level": 1
+        }
+      ],
+      "warnings": []
+    }
+  ],
+  "warnings": []
 }
 ```
 
-最终目标不是把 Markdown 包一层 JSON，而是输出 block-oriented schema：
+Schema fields:
 
-- `blocks[]`
-- `kind`
-- `text`
-- `source_anchor`
-- `page`
-- `slide`
-- `sheet`
-- `row_range`
-- `truncated`
-- `warnings`
+- top-level：`mode`、`schema_version`、`documents[]`、`warnings[]`
+- document：`source`、`format`、`blocks[]`、`warnings[]`
+- block：`id`、`kind`、`text`、`source_anchor`、`truncated`、`warnings`
+- conditional block fields：`level`、`language`、`page`、`slide`、`sheet`、`row_range`
 
-这部分暂不实现，避免过早锁定错误 schema。
+第一版 blocks 从 Markdown 输出派生，不改 extractor 返回类型。它能稳定识别 heading、paragraph、table、list、code block；能从 `## Slide N`、`## Sheet: name`、`## Page N` 推断 `slide`、`sheet`、`page`；CSV truncation marker 会标记前一个 table block 的 `truncated: true` 并写入 warnings。精确 page/row/shape anchors 留给后续 extractor-native block work。
 
 ## 格式决策
 
@@ -332,7 +341,7 @@ URL 读取当前有 30 秒 timeout 和 50 MB response body cap。后续如果 UR
 
 P0：
 
-- Block-oriented JSON v1：未实现。
+- Block-oriented JSON v1：第一版已完成，当前是 Markdown-derived blocks。
 - PDF page boundary：未实现。
 - 大表三档降级：未实现。
 - ZIP 安全层：第一版已完成，仍缺 total cap、warnings、用户配置和 XLSX 评估。
@@ -346,7 +355,7 @@ P1：
 
 P2/P3：
 
-- Rust library API：已有第一版 facade，稳定性仍需随 JSON blocks 收敛。
+- Rust library API：已有第一版 facade 和 JSON schema 类型，稳定性仍需随 extractor-native blocks 收敛。
 - 分发完善：Homebrew/GitHub Release 已作为主线，winget/apt 未做。
 - 可选 OCR/VLM backend：长期方向，默认关闭。
 
@@ -360,4 +369,4 @@ P2/P3：
 - token 经济策略：大表和长 CSV 的截断。
 - 错误是否清楚：坏 zip、空文件、坏 JSON。
 - CLI contract：help、version、多输入、glob、format override、json mode、错误退出码。
-- JSON mode：当前只验证占位 schema，暂不验证 block schema。
+- JSON mode：验证 v1 schema、block kinds、anchors、truncation warnings。
