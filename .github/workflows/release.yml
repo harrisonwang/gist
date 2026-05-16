@@ -169,3 +169,35 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/harrisonwang/homebrew-tap/dispatches" \
             -d "$payload"
+
+  notify-scoop-bucket:
+    if: github.ref_type == 'tag'
+    name: notify scoop bucket
+    runs-on: ubuntu-latest
+    needs: publish
+    steps:
+      - name: Dispatch to scoop-bucket
+        env:
+          TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$TOKEN" ]]; then
+            echo "SCOOP_BUCKET_TOKEN is not configured" >&2
+            exit 1
+          fi
+
+          payload="$(jq -n \
+            --arg tool "pith" \
+            --arg tag "$TAG" \
+            --arg repo "$REPO" \
+            '{event_type:"tool-released", client_payload:{tool:$tool, tag:$tag, repo:$repo}}')"
+
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/harrisonwang/scoop-bucket/dispatches" \
+            -d "$payload"
