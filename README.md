@@ -203,7 +203,7 @@ For PDF/DOCX/PPTX, use `pith <path>` to get Markdown.
 
 ```bash
 brew install harrisonwang/tap/pith
-npx skills add harrisonwang/pith
+npx skills add harrisonwang/pith -y -g
 ```
 
 Skill 安装交给 multi-agent installer 处理；以 `~/.agents/skills` 作为 universal skill 目录，再按需同步或链接到 Claude Code、Codex、Cursor、GitHub Copilot 等具体 Agent。`pith` 不要求用户手工维护 `~/.codex/skills`。
