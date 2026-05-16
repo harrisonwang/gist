@@ -1010,7 +1010,7 @@ dependencies = [
 
 [[package]]
 name = "pith"
-version = "0.5.1"
+version = "0.5.3"
 dependencies = [
  "anyhow",
  "calamine",

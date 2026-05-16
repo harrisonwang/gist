@@ -71,13 +71,21 @@ scoop bucket add harrisonwang https://github.com/harrisonwang/scoop-bucket
 scoop install pith
 ```
 
+跨平台（npm，企业内网友好）：
+
+```bash
+npm install -g @harrisonwang/pith
+```
+
+`@harrisonwang/pith` 是 JS 薄壳，通过 `optionalDependencies` 按平台拉对应的 `@harrisonwang/pith-<platform>-<arch>` 子包——零 postinstall 脚本，完全走 npm registry。
+
 跨平台源码安装（需要 Rust toolchain）：
 
 ```bash
 cargo install --git https://github.com/harrisonwang/pith
 ```
 
-当前不发布到 crates.io，也不把 `cargo binstall pith` 作为安装承诺。推荐普通用户优先用 Homebrew / Scoop，它们安装的是 GitHub Release 里的预构建单二进制。
+当前不发布到 crates.io，也不把 `cargo binstall pith` 作为安装承诺。推荐普通用户优先用 Homebrew / Scoop / npm，它们安装的都是 GitHub Release 里的预构建单二进制。
 
 从源码构建：
 
